@@ -1,0 +1,274 @@
+<html>
+    <head>
+        <style>
+            /* Add some padding on document's body to prevent the content
+            to go underneath the header and footer */
+            body{        
+                padding-top: 60px;
+                padding-bottom: 40px;
+            }
+            .fixed-header, .fixed-footer{
+                width: 100%;
+                position: fixed;        
+                background: #333;
+                padding: 10px 0;
+                color: #fff;
+            }
+            .fixed-header{
+                top: 0;
+            }
+            .fixed-footer{
+                bottom: 0;
+            }
+            .container{
+                width: 80%;
+                margin: 0 auto; /* Center the DIV horizontally */
+            }
+            nav a{
+                color: #fff;
+                text-decoration: none;
+                padding: 7px 25px;
+                display: inline-block;
+            }
+        </style>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"/> 
+        <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+
+    </head>
+    <body>
+        <div class="fixed-header">
+            <div class>
+                <nav>
+                    <a href="/"><span style="font-size: 40px;">COVID-19 in France</span></a>
+                    
+                </nav>
+            </div>
+        </div>
+        <div class="col-lg-3" style="float: left;  max-height: 650px;max-width:400px;overflow: scroll; overflow-x:hidden;">
+            <div style="background-color: rgb(41, 41, 40); width:320px">
+                        
+                <span style="color: rgb(255, 255, 255); text-align: center;"><h2>Total Infected: {{total_infect.tot_infect__sum}}</h2></span>
+            </div>
+
+            <div class="col-lg-12">
+                <form method="post" enctype="multipart/form-data" action="">
+                    {% csrf_token %}
+                    <div class="col-lg-4" style="float: left;">
+                        {% for con in name_array %}
+                        <table style="border-width: 2px; border: #333;">
+                            <tr>
+                                <input type="submit" value={{con}} name="countryName" style="width:80px; height: 24.9px;">
+                            </tr>
+                        </table>
+                        {% endfor %}
+                    </div>
+                    <div style="float: left;"> 
+                        <canvas id="myChart" style="height: 2800px; width: 250px;"></canvas>
+                    </div>
+                </form>
+                
+
+            </div>
+            
+        </div>
+        <div class="col-lg-6" style="float: left;">
+            <br>
+            <br>
+            <div id="map" style="height: 500px; width: 750px; margin-left: 10px;">
+                
+            </div>
+        </div>
+
+        <div class="col-lg-4" style="float: right; width: 100px; margin-top: 40px; margin-right: 40px;">
+            <form method="POST" enctype="multipart/form-data" action="" name="userForm"> 
+                {% csrf_token %}
+                <input type= "text" id = "user_lat" name = "user_lat" value = "" style="display:none" required>
+                <input type= "text" id = "user_lon" name = "user_lon" value = "" style="display:none" required>
+                <button type="submit" onclick="contextInfo()">Context Info.</button>
+                
+               
+            </form>
+
+            <form method="POST" enctype="multipart/form-data" action="">
+                {% csrf_token %}
+                <label>Choose Dep.</label>
+                <select name="depName" style = "width:100px">
+                    {% for nom in  dep_names_all %}
+                  <option value="{{nom}}" name="depName" >{{nom}}</option>
+                  {% endfor %}
+                </select>
+                <input type="submit">
+              </form>
+
+              <form method="POST" enctype="multipart/form-data" action="" name="infectNo"> 
+                {% csrf_token %}
+                <label>Infection</label>
+                <input type=number step=1 id = "infectNo" name = "infectNo" value = "" required style = "width:100px">
+                
+                <button type="submit" >submit</button>
+                
+            </form>
+            <form method="POST" enctype="multipart/form-data" action="" name="deathNo"> 
+                {% csrf_token %}
+                <label>Death</label>
+                <input type=number step=1 id = "deathNo" name = "deathNo" value = "" required style = "width:100px">
+                
+                <button type="submit" >submit</button>
+                
+            </form>
+
+        </div>
+        
+        
+        <script>
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var chartOptions = {
+                            legend: {
+                                display: false
+                                    },
+                            scales: {
+                                xAxes: [{
+                                    barPercentage:1
+                                    }],
+                                yAxes: [
+                                        // {barPercentage: 1},
+                                        // {gridLines:{drawBorder: false}},
+                                        {ticks: {display:false}},
+                                        // {ticks: {mirror: true}},
+                                        {display: false},
+                                        
+                                        ],
+                            elements: {
+                                rectangle: {
+                                borderSkipped: 'left',
+                                }
+                            }
+                            }
+                        };
+            var chart = new Chart(ctx, {
+                // The type of chart we want to create
+                type: 'horizontalBar',
+
+                // The data for our dataset
+                data: {
+                   
+                    labels: {{ name_array|safe }},
+                    
+                    datasets: [{
+                        label: 'Total Infected',
+                        backgroundColor: 'rgb(255, 99, 132)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        data: {{ infected_array|safe }},
+                    }]
+                },
+
+                // Configuration options go here
+                options: chartOptions
+            });
+
+            /// chropleth mapping 6 classes
+            function getColor(d) {
+                var max = Math.max(...{{infected_array|safe}})
+                console.log(max)
+
+
+                
+                return d > 9000 ? '#800026' :
+                    d > 6000  ? '#FC4E2A' :
+                    d > 3000   ? '#FD8D3C' :
+                    d > 1000  ? '#FEB24C' :
+                    d > 500   ? '#FED976' :
+                                '#FFEDA0';
+            }
+            function style(feature) {
+           
+                return {
+                    fillColor: getColor(feature.properties.tot_infect),
+                    weight: 2,
+                    opacity: 0.8,
+                    color: 'gray',
+                    dashArray: '4',
+                    fillOpacity: 0.7
+                };
+	        }
+
+
+            function onEachFeature(feature, layer) {
+
+                var popupText = "<b>Name:</b> " + feature.properties.nom +
+                "<br><b>Tot. Infected:</b> " + feature.properties.tot_infect +
+                "<br><b>Tot. Death:</b> " + feature.properties.tot_death_field;
+
+                layer.bindPopup(popupText, {
+                    closeButton: true,
+                    offset: L.point(0, -10)
+                });
+                layer.on('click', function() {
+                    layer.openPopup();
+                });
+               
+            };
+            
+
+            var neighbor_name = {{neighbor_array_name|safe}}
+            var infection_rate = {{neighbor_infection_rate|safe}}
+            var neighbor_distance = {{neighbor_dis|safe}}
+            
+            var text =[]
+            for(i=0; i<neighbor_name.length; i++){
+                  text.push("dist to " + '<b>'+neighbor_name[i]+'</b>' + ": " + neighbor_distance[i].toFixed(2)+ "km and " + '<b>'+"infection rate: " +'</b>'+ infection_rate[i].toFixed(2) +'<br>')
+                };
+            var map = L.map('map').setView([{{lat|safe}}, {{lon|safe}}], {{zoom|safe}});
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+            var collection = {{ departments|safe }};
+            L.geoJson(collection, {
+                style: style,
+                onEachFeature: onEachFeature}).addTo(map);
+            var popup = L.popup()
+                .setContent("you are inside " + '<b>'+"{{user_dep_name|safe}}"+'</b>' + '<br>' + text
+                
+                
+                );
+            {% if userLat != 0 %} /// because it was initialized in views.py as 0
+                L.marker([{{userLat|safe}}, {{userLon|safe}}]).addTo(map).bindPopup(popup).openPopup();;
+            {% endif %}
+             //////: Geting user's position and send it to html form
+             //loc = []
+            window.onload = function getLocation() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function showPosition(position) {
+                            //loc.push(position.coords.latitude);
+                            //loc.push(position.coords.longitude);
+                            document.getElementById("user_lat").value = position.coords.latitude
+                            document.getElementById("user_lon").value = position.coords.longitude
+                            console.log(position.coords.latitude, position.coords.longitude)
+                            
+
+                        });
+                    } else {
+                        console.log("Geolocation is not supported by this browser.");
+                    }
+            }
+               
+                
+                
+
+
+             $.getJSON('https://geolocation-db.com/json/')
+                .done (function(location) {
+                    
+                    
+                    //document.getElementById("user_lat").value = location.latitude
+                    //document.getElementById("user_lon").value = location.longitude
+                    //console.log(location.latitude, location.longitude)
+                    
+            });
+
+
+        </script>
+    </body>
+</html>
