@@ -1,2 +1,3 @@
 # Context-Aware-COVID-19
 The app was developed by JavaScript, HTML5, CSS and Leaflet in front-end. The back-end side was developed by Django, python and PostGIS as spatial data server. It enables users to visualize covid-19 data in france with bar chart and choropleth map. The context-awareness aspect of the app allows users to locate themselves, get information about neighboring destinations (both with topological queris), the distance between them, and also the COVID-19 infection rate at those places. The covid-19 data are at French department scale. Besides, they are provided with simple and user-friendly form fields to query the map attributes such as name, death rate and total infection per each department. 
+![Screenshot](diagram.png)
